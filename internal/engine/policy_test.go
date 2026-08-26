@@ -33,3 +33,9 @@ func TestUsagePercent(t *testing.T) {
 		t.Fatalf("zero quota got %v", value)
 	}
 }
+
+func TestRegionNameIncludesSeoul(t *testing.T) {
+	if name := RegionName("ap-northeast-2"); name != "韩国（首尔）" {
+		t.Fatalf("got %q", name)
+	}
+}
