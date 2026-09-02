@@ -363,7 +363,14 @@ func (e *Engine) processAccount(ctx context.Context, accountID int64, force bool
 }
 
 func (e *Engine) executeScheduledAction(ctx context.Context, config domain.Config, account domain.Account, secret, action string, now time.Time) (bool, error) {
-	key := fmt.Sprintf("schedule:%d:%s:%s", account.ID, now.Format("20060102"), action)
+	targetTime := account.StartTime
+	if action == "stop" {
+		targetTime = account.StopTime
+	}
+	// 去重 key 加入具体的目标时间点（HH:MM），而不是只按日期。
+	// 这样同一个时间点在当天只会真正触发一次（避免 15 秒轮询在 10 分钟窗口内重复调用阿里云 API），
+	// 但只要用户修改了开机/关机时间，就会生成新的 key，可以立刻再次触发，方便反复测试。
+	key := fmt.Sprintf("schedule:%d:%s:%s:%s", account.ID, now.Format("20060102"), targetTime, action)
 	fresh, err := e.store.RecordActionEvent(ctx, key, account.ID, "schedule_"+action, "attempting", "")
 	if err != nil || !fresh {
 		return false, err
